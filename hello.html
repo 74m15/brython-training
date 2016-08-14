@@ -15,6 +15,9 @@ def on_touchstart(event):
     ctx.moveTo(0,0)
     ctx.lineTo(300,300)
     ctx.stroke()
+    
+    document["pos"] <= str(dir(event))
+
 
 canvas = document["canvas"]
 canvas.bind("touchstart", on_touchstart)
@@ -22,6 +25,7 @@ canvas.bind("touchstart", on_touchstart)
 </script>
 <h1>Touch test!</h1>
 <p>Touch the canvas and move around.</p>
-<canvas id="canvas" style="width:400; height:400;"/>
+<canvas id="canvas" width="400" height="400" style="border:1px solid black;"/>
+<p id="pos"/>
 </body>
 </html>
