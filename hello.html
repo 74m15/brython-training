@@ -1,16 +1,24 @@
 <html>
 <head>
-<script src="./brython-3.2.7/brython.js"></script>
+<script src="./brython_3.2.7/brython.js"></script>
 </head>
 <body onload="brython()">
 <script type="text/python">
 from browser import document, alert
 
-def echo(ev):
-    alert(document["zone"].value)
+canvas = document["canvas"]
 
-document['mybutton'].bind('click',echo)
+ctx = canvas.getContext('2d')
+ctx.rect(0, 0, 300, 300)
+grd = ctx.createRadialGradient(150, 150, 10, 150, 150, 150)
+grd.addColorStop(0, '#8ED6FF')
+grd.addColorStop(1, '#004CB3')
+ctx.fillStyle = grd
+ctx.fill()
+
 </script>
-<input id="zone"><button id="mybutton">click !</button>
+<h1>Touch test!</h1>
+<p>Touch the canvas and move around.</p>
+<canvas id="canvas" style="width:400; height=400"/>
 </body>
 </html>
