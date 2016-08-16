@@ -5,32 +5,58 @@
 * { margin: 0px;}
 </style>
 </head>
-<body onload="brython(1)">
+<body onload="brython(debug=1, re_module='jsre')">
 <script type="text/python">
-from browser import document, html
-from sys import stderr
+from browser import document, html, window
+from browser.local_storage import storage
+from javascript import JSConstructor
 
-def write(*args):
-  document["log"] <= html.PRE(str(args))
 
-stderr.write = write
+def re_findall(pattern, text):
+  """
+  Utility function for replacing re.findall function using plain RegExp JavaScript object
+  """
+  jsre = JSConstructor(window.RegExp)
+  jObj = jsre(pattern, "g")
+  
+  matches = list()
+  
+  while True:
+    match = jObj.exec(text)
+
+    if (match is None):
+      return matches
+      
+    matches.append(match)
+
 
 class Point:
   def __init__(self, x, y):
     self.x = x
     self.y = y
 
+
 class TouchManager:
 
   def __init__(self):
-    self.pathList = []
-
-  def drawLine(self, ctx, from, to):
+    self.pathList = list()
+  
+  def drawLine(self, ctx, _from, _to):
     ctx.beginPath()
-    ctx.moveTo(from.x, from.y)
-    ctx.lineTo(to.x, to.y)
+    ctx.moveTo(_from.x, _from.y)
+    ctx.lineTo(_to.x, _to.y)
     ctx.stroke()
+    
+  def drawPath(self, ctx, path):
+    if (len(path) > 1):
+      ctx.beginPath()
+      ctx.moveTo(path[0].x, path[0].y)
       
+      for idx in range(1, len(path)):
+        ctx.lineTo(path[idx].x, path[idx].y)
+      
+      ctx.stroke()
+  
   def on_touchstart(self, event):
     if (event.target.id == "canvas"):
       self.currentPoint = Point(
@@ -40,9 +66,16 @@ class TouchManager:
       self.currentPath = list()
       self.currentPath.append(self.currentPoint)
       
-      document["pos"] <= html.P("touchstart: %s" % (str(self.currentPoint)))
-      
       event.preventDefault()
+  
+  def on_touchend(self, event):
+    if (len(self.currentPath) > 1):
+      self.pathList.append(self.currentPath)
+      
+    del self.currentPath
+    del self.currentPoint
+      
+    event.preventDefault()
   
   def on_touchmove(self, event):
     if (event.target.id == "canvas"):
@@ -53,15 +86,77 @@ class TouchManager:
       self.drawLine(event.target.getContext("2d"), self.currentPoint, touchPoint)
       
       self.currentPoint = touchPoint
-      self.currentPath.add(self.currentPoint)
+      self.currentPath.append(self.currentPoint)
       
       event.preventDefault()
+  
+  def on_cleanCanvas(self, event):
+    canvas = document["canvas"]    
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height)
+  
+  def to_JSON(self, pathList):
+    
+    def to_JSON(path):
+        return "{ Path: [%s] }" % (",".join(["(%d, %d)" % (p.x, p.y) for p in path]))
+        
+    return "{ PathList: [%s] }" % (",".join([to_JSON(path) for path in pathList]))
+  
+  def from_JSON(self, json):
+    
+    def from_JSON(path_json):
+        print("Matching all points...")
+        pointMatches = re_findall(r"\((\d+), (\d+)\)", path_json)
+        
+        path = [Point(int(p[1]), int(p[2])) for p in pointMatches]
+        
+        return path
+    
+    print("Matching all paths...")
+    pathMatches = re_findall(r"(\{ Path: \[(?:\(\d+, \d+\),?)+\] \})", json)
+    
+    pathList = [from_JSON(path_json[1]) for path_json in pathMatches]
+    
+    return pathList
+    
+  def on_memoryAdd(self, event):
+    storage["pathList"] = self.to_JSON(self.pathList)
+    
+    print("Stored path list")
+    print(self.to_JSON(self.pathList))
+  
+  def on_memoryRecall(self, event):
+    try:
+      json = storage["pathList"]
+      
+      print("Retrieved path list")
+      print(json)
+      
+      self.pathList = self.from_JSON(storage["pathList"])
+      
+      for path in self.pathList:
+        self.drawPath(canvas.getContext("2d"), path)
+    except:
+      print("Empty storage, nothing to do!")
+
+  def on_memoryClean(self, event):
+    del storage["pathList"]
+    
+    self.pathList = list()
+
 
 tmgr = TouchManager()
 
 canvas = document["canvas"]
 canvas.bind("touchstart", tmgr.on_touchstart)
 canvas.bind("touchmove", tmgr.on_touchmove)
+canvas.bind("touchend", tmgr.on_touchend)
+
+document["btn_cleanCanvas"].bind("click", tmgr.on_cleanCanvas)
+document["btn_memoryAdd"].bind("click", tmgr.on_memoryAdd)
+document["btn_memoryRecall"].bind("click", tmgr.on_memoryRecall)
+document["btn_memoryClean"].bind("click", tmgr.on_memoryClean)
+
+print("Go Go Go!!!")
 
 </script>
 <div>
@@ -69,7 +164,10 @@ canvas.bind("touchmove", tmgr.on_touchmove)
 </div>
 <h1>Touch test!</h1>
 <p>Touch the canvas and move around.</p>
+<input type="button" id="btn_cleanCanvas" value="Clean Canvas"/>
+<input type="button" id="btn_memoryAdd" value="M+""/>
+<input type="button" id="btn_memoryRecall" value="MR"/>
+<input type="button" id="btn_memoryClean" value="MC"/>
 <div id="pos"></div>
-<div id="log"></div>
 </body>
 </html>
