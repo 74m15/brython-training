@@ -1,0 +1,75 @@
+<html>
+<head>
+<script src="./brython_3.2.7/brython.js"></script>
+<style>
+* { margin: 0px;}
+</style>
+</head>
+<body onload="brython(1)">
+<script type="text/python">
+from browser import document, html
+from sys import stderr
+
+def write(*args):
+  document["log"] <= html.PRE(str(args))
+
+stderr.write = write
+
+class Point:
+  def __init__(self, x, y):
+    self.x = x
+    self.y = y
+
+class TouchManager:
+
+  def __init__(self):
+    self.pathList = []
+
+  def drawLine(self, ctx, from, to):
+    ctx.beginPath()
+    ctx.moveTo(from.x, from.y)
+    ctx.lineTo(to.x, to.y)
+    ctx.stroke()
+      
+  def on_touchstart(self, event):
+    if (event.target.id == "canvas"):
+      self.currentPoint = Point(
+        int(event.targetTouches[0].pageX),
+        int(event.targetTouches[0].pageY))
+      
+      self.currentPath = list()
+      self.currentPath.append(self.currentPoint)
+      
+      document["pos"] <= html.P("touchstart: %s" % (str(self.currentPoint)))
+      
+      event.preventDefault()
+  
+  def on_touchmove(self, event):
+    if (event.target.id == "canvas"):
+      touchPoint = Point(
+        int(event.targetTouches[0].pageX),
+        int(event.targetTouches[0].pageY))
+      
+      self.drawLine(event.target.getContext("2d"), self.currentPoint, touchPoint)
+      
+      self.currentPoint = touchPoint
+      self.currentPath.add(self.currentPoint)
+      
+      event.preventDefault()
+
+tmgr = TouchManager()
+
+canvas = document["canvas"]
+canvas.bind("touchstart", tmgr.on_touchstart)
+canvas.bind("touchmove", tmgr.on_touchmove)
+
+</script>
+<div>
+<canvas id="canvas" width="600" height="600" style="border:1px solid black;"/>
+</div>
+<h1>Touch test!</h1>
+<p>Touch the canvas and move around.</p>
+<div id="pos"></div>
+<div id="log"></div>
+</body>
+</html>
