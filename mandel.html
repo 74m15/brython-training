@@ -1,0 +1,77 @@
+<html>
+<head>
+<script src="./brython_3.2.7/brython.js"></script>
+<style>
+* { margin: 0px;}
+</style>
+</head>
+<body onload="brython(1)">
+<script type="text/python">
+from browser import document, html, timer
+
+class Mandel:
+  
+  def __init__(self, width, max_iter, canvas):
+    self.width = width
+    self.ratio = min(canvas.width, canvas.height) / width
+    self.max_iter = max_iter
+    self.ctx = canvas.getContext("2d")
+  
+  def drawPixel(self, x, y, c):
+    self.ctx.fillStyle = "#%02x%02x%02x" % (c,c,c)
+    self.ctx.fillRect(int(x * self.ratio), int(y * self.ratio), int((x+1) * self.ratio) - 1, int((y+1) * self.ratio) - 1)
+  
+  def getColor(self, c):
+    z = c
+    iter = 1
+    
+    while True:
+      z = z*z + c
+      
+      if (abs(z) > 2):
+        return min(255,iter)
+      
+      if (iter > self.max_iter):
+        return 255
+
+      iter += 1
+  
+  def run(self):
+    f = 2.5 / self.width
+    
+    for x in range(self.width):
+      for y in range(self.width):
+        c = complex(-2.0 + x * f, 1.25 - y * f)
+        
+        self.drawPixel(x, y, self.getColor(c))
+  
+def on_click(event):
+  try:
+    document["log"] <= html.P("Processing Mandelbrot set...")
+    
+    mandel = Mandel(
+      int(document["txt_width"].value), 
+      int(document["txt_max_iter"].value), 
+      document["mandelbrot"])
+    
+    timer.set_timeout(mandel.run, 10)
+  except Exception as ex:
+    document["log"] <= html.P("Error!!! " + str(ex))
+
+
+try:
+  document["do_mandelbrot"].bind("click", on_click)
+  document["log"] <= html.P("Started!")
+except Exception as ex:
+  document["container"] <= html.P("Error!!! " + str(ex))
+</script>
+<div id="container">
+<canvas id="mandelbrot" width="400" height="400"/>
+</div>
+<h1>Mandelbrot set</h1>
+<p>Width <input type="text" value="100" id="txt_width"/></p>
+<p>Max iter <input type="text" value="50" id="txt_max_iter"/></p>
+<input type="button" value="Do Mandelbrot" id="do_mandelbrot"/>
+<div id="log"/>
+</body>
+</html>
