@@ -29,10 +29,10 @@ class Mandel:
       z = z*z + c
       
       if (abs(z) > 2):
-        return min(255,iter)
+        return max(0, 256 - iter)
       
       if (iter > self.max_iter):
-        return 255
+        return 0
 
       iter += 1
   
