@@ -36,24 +36,18 @@ class Mandel:
 
       iter += 1
   
-  def run(self, y):
-  
-    def _run():
-      f = 2.5 / self.width
-      
-      print("y=%d" % y)
+  def run(self, y0):
+    f = 2.5 / self.width
+    
+    for y in range(10):
+      print("y=%d" % (y + y0))
       
       for x in range(self.width):
-        c = complex(-2.0 + x * f, 1.25 - y * f)
+        c = complex(-2.0 + x * f, 1.25 - (y + y0) * f)
         
-        self.drawPixel(x, y, self.getColor(c))
-      
-      if (y+1 < self.width):
-        timer.set_timeout(self.run(y+1), 10)
-      else:
-        document["log"] <= html.P("Processing done!")
-        
-    return _run
+        self.drawPixel(x, y + y0, self.getColor(c))
+    
+    document["log"] <= html.P("Processing done for y0=%d!" % y0)
   
 def on_click(event):
   try:
@@ -64,7 +58,8 @@ def on_click(event):
       int(document["txt_max_iter"].value), 
       document["mandelbrot"])
     
-    timer.set_timeout(mandel.run(0), 10)
+    for y in range(0, 200, 10):
+      timer.set_timeout(mandel.run(y), 1000 * y)
   except Exception as ex:
     document["log"] <= html.P("Error!!! " + str(ex))
 
@@ -81,7 +76,7 @@ except Exception as ex:
 <h1>Mandelbrot set</h1>
 <p>Width <input type="text" value="100" id="txt_width"/></p>
 <p>Max iter <input type="text" value="50" id="txt_max_iter"/></p>
-<input type="button" value="Do Mandelbrot" id="do_mandelbrot"/>
+<button id="do_mandelbrot">Do Mandelbrot</button>
 <div id="log"/>
 </body>
 </html>
