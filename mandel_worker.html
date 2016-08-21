@@ -1,0 +1,109 @@
+<html>
+<head>
+<script src="./brython_3.2.7/brython.js"></script>
+<style>
+* { margin: 0px;}
+</style>
+</head>
+<body onload="brython(1)">
+<script type="text/python">
+from browser import document, html, timer, window
+import javascript as js
+
+class Mandel:
+  
+  def __init__(self, width, max_iter, canvas):
+    self.width = width
+    self.ratio = min(canvas.width, canvas.height) / width
+    self.max_iter = max_iter
+    self.ctx = canvas.getContext("2d")
+  
+  def drawPixel(self, x, y, c):
+    self.ctx.fillStyle = "#%02x%02x%02x" % (c,c,c)
+    self.ctx.fillRect(int(x * self.ratio), int(y * self.ratio), int(self.ratio), int(self.ratio))
+  
+  def getColor(self, c):
+    z = c
+    iter = 1
+    
+    while True:
+      z = z*z + c
+      
+      if (abs(z) > 2):
+        return max(0, 256 - iter)
+      
+      if (iter > self.max_iter):
+        return 0
+
+      iter += 1
+  
+  def run(self, y0):
+    f = 2.5 / self.width
+    
+    for y in range(10):
+      print("y=%d" % (y + y0))
+      
+      for x in range(self.width):
+        c = complex(-2.0 + x * f, 1.25 - (y + y0) * f)
+        
+        self.drawPixel(x, y + y0, self.getColor(c))
+    
+    document["log"] <= html.P("Processing done for y0=%d!" % y0)
+  
+def on_click(event):
+  try:
+    document["log"] <= html.P("Processing Mandelbrot set...")
+    
+    mandel = Mandel(
+      int(document["txt_width"].value), 
+      int(document["txt_max_iter"].value), 
+      document["mandelbrot"])
+    
+    for y in range(0, 200, 10):
+      timer.set_timeout(mandel.run(y), 1000 * y)
+  except Exception as ex:
+    document["log"] <= html.P("Error!!! " + str(ex))
+
+worker = None
+
+def on_ww_start(event):
+  try:
+    initWorker = js.JSConstructor(window.Worker)
+    worker = initWorker("mandel.js")
+    worker.bind("message", on_ww_message)
+  except Exception as ex:
+    document["log"] <= html.P("Error!!! " + str(ex))
+
+def on_ww_stop(event):
+  pass
+
+def on_ww_message(event):
+  document["ww_text"] <= html.P("worker output: %r" % event.data)
+  document["log"] <= html.P("worker output: %r" % event.data)
+  
+  worker.terminate()
+
+try:
+  document["do_mandelbrot"].bind("click", on_click)
+  document["log"] <= html.P("Started!")
+
+# web worker setup
+  document["ww_start"].bind("click", on_ww_start)
+  document["ww_stop"].bind("click", on_ww_stop)
+except Exception as ex:
+  document["container"] <= html.P("Error!!! " + str(ex))
+</script>
+<div id="container">
+<canvas id="mandelbrot" width="400" height="400"/>
+</div>
+<h1>Mandelbrot set</h1>
+<p>Width <input type="text" value="100" id="txt_width"/></p>
+<p>Max iter <input type="text" value="50" id="txt_max_iter"/></p>
+<button id="do_mandelbrot">Do Mandelbrot</button>
+<p>Web worker test</p>
+<button id="ww_start">Start</button>
+<button id="ww_stop">Stop</button>
+Value at 0+0i: <span id="ww_text"></span>
+<div id="log"/>
+</body>
+</html>
