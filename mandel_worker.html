@@ -40,15 +40,18 @@ class Mandel:
   def run(self, y0):
     f = 2.5 / self.width
     
-    for y in range(10):
-      print("y=%d" % (y + y0))
-      
-      for x in range(self.width):
-        c = complex(-2.0 + x * f, 1.25 - (y + y0) * f)
+    def _run():
+      for y in range(10):
+        print("y=%d" % (y + y0))
         
-        self.drawPixel(x, y + y0, self.getColor(c))
-    
-    document["log"] <= html.P("Processing done for y0=%d!" % y0)
+        for x in range(self.width):
+          c = complex(-2.0 + x * f, 1.25 - (y + y0) * f)
+          
+          self.drawPixel(x, y + y0, self.getColor(c))
+      
+      document["log"] <= html.P("Processing done for y0=%d!" % y0)
+
+    return _run
   
 def on_click(event):
   try:
@@ -59,29 +62,39 @@ def on_click(event):
       int(document["txt_max_iter"].value), 
       document["mandelbrot"])
     
-    for y in range(0, 200, 10):
-      timer.set_timeout(mandel.run(y), 1000 * y)
+    for y in range(0, mandel.width, 10):
+      timer.set_timeout(mandel.run(y), 100 * y)
   except Exception as ex:
     document["log"] <= html.P("Error!!! " + str(ex))
 
 worker = None
+mandel = None
+
 
 def on_ww_start(event):
+  global mandel
+
   try:
+    mandel = Mandel(
+      int(document["txt_width"].value), 
+      int(document["txt_max_iter"].value), 
+      document["mandelbrot"])
+
     initWorker = js.JSConstructor(window.Worker)
     worker = initWorker("mandel.js")
     worker.bind("message", on_ww_message)
+    worker.postMessage({"cmd":'start', "width":mandel.width, "max_iter":mandel.max_iter})
   except Exception as ex:
+    print(ex)
+
     document["log"] <= html.P("Error!!! " + str(ex))
 
 def on_ww_stop(event):
-  pass
+  worker.postMessage({"cmd":'stop'})
 
 def on_ww_message(event):
-  document["ww_text"] <= html.P("worker output: %r" % event.data)
-  document["log"] <= html.P("worker output: %r" % event.data)
-  
-  worker.terminate()
+  mandel.drawPixel(event.data.x, event.data.y, event.data.c)
+
 
 try:
   document["do_mandelbrot"].bind("click", on_click)
